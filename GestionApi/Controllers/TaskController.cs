@@ -8,7 +8,8 @@ namespace GestionApi.Controllers
     [Route("Task")]
     public class TaskController : Controller
     {
-        
+        #region CONTEXTO
+
         private readonly GestionDBContext _context;  //Usar el Contexto
 
         public TaskController(GestionDBContext context)
@@ -16,6 +17,10 @@ namespace GestionApi.Controllers
             _context = context;
         }
 
+        #endregion
+
+
+        #region GET
 
         [HttpGet]
         [Route("Get")]
@@ -24,7 +29,9 @@ namespace GestionApi.Controllers
             var tasks = await _context.Task.ToListAsync();
             return Ok(tasks);
         }
+        #endregion
 
+        #region GETBYID
 
         [HttpGet]
         [Route("Get/{id}")]
@@ -37,7 +44,9 @@ namespace GestionApi.Controllers
             }
             return Ok(task);
         }
+        #endregion
 
+        #region POST
 
 
         [HttpPost]
@@ -52,6 +61,9 @@ namespace GestionApi.Controllers
             await _context.SaveChangesAsync();
             return CreatedAtAction(nameof(Get), new { id = task.Id }, task);
         }
+        #endregion
+
+        #region EDIT
 
         [HttpPut]
         [Route("Put/{id}")]
@@ -79,6 +91,9 @@ namespace GestionApi.Controllers
             }
             return NoContent();
         }
+        #endregion
+
+        #region DELETE
 
         [HttpDelete]
         [Route("Delete/{id}")]
@@ -94,6 +109,7 @@ namespace GestionApi.Controllers
             return NoContent();
         }
 
+        #endregion
 
 
 
