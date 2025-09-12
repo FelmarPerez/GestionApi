@@ -1,11 +1,13 @@
 ﻿using GestionApi.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace GestionApi.Controllers
 {
     [ApiController] //Decirle a Swagger que esto es un controlador de API
-    [Route("Task")]
+    [Route("api/[controller]")]
+    [Authorize] // Requerir autenticación JWT para todos los endpoints
     public class TaskController : Controller
     {
         #region CONTEXTO
@@ -23,7 +25,6 @@ namespace GestionApi.Controllers
         #region GET
 
         [HttpGet]
-        [Route("Get")]
         public async Task<IActionResult> Get()
         {
             var tasks = await _context.Task.ToListAsync();
@@ -33,8 +34,7 @@ namespace GestionApi.Controllers
 
         #region GETBYID
 
-        [HttpGet]
-        [Route("Get/{id}")]
+        [HttpGet("{id}")]
         public async Task<IActionResult> Get(int id)
         {
             var task = await _context.Task.FindAsync(id);
@@ -50,7 +50,6 @@ namespace GestionApi.Controllers
 
 
         [HttpPost]
-        [Route("Post")]
         public async Task<IActionResult> Post([FromBody] Models.Tareas task)
         {
             if (task == null)
@@ -65,8 +64,7 @@ namespace GestionApi.Controllers
 
         #region EDIT
 
-        [HttpPut]
-        [Route("Put/{id}")]
+        [HttpPut("{id}")]
         public async Task<IActionResult> Put(int id, [FromBody] Models.Tareas task)
         {
             if (id != task.Id)
@@ -95,8 +93,7 @@ namespace GestionApi.Controllers
 
         #region DELETE
 
-        [HttpDelete]
-        [Route("Delete/{id}")]
+        [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
             var task = await _context.Task.FindAsync(id);

@@ -11,8 +11,8 @@ namespace GestionApi.Data
         {
         }
 
-
-        public DbSet<Tareas> Task { get; set; }
+        public DbSet<Usuario> Usuario { get; set; }
+        public DbSet<Tareas> Task { get; set; } 
 
     }
 }
