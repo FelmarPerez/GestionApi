@@ -1,7 +1,9 @@
 ﻿using GestionApi.Data;
+using GestionApi.Hubs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.SignalR;
 
 namespace GestionApi.Controllers
 {
@@ -13,10 +15,12 @@ namespace GestionApi.Controllers
         #region CONTEXTO
 
         private readonly GestionDBContext _context;  //Usar el Contexto
+        private readonly IHubContext<TasksHub>? _hub;
 
-        public TaskController(GestionDBContext context)
+        public TaskController(GestionDBContext context, IHubContext<TasksHub>? hub = null)
         {
             _context = context;
+            _hub = hub;
         }
 
         #endregion
@@ -27,7 +31,8 @@ namespace GestionApi.Controllers
         [HttpGet]
         public async Task<IActionResult> Get()
         {
-            var tasks = await _context.Task.ToListAsync();
+            Func<Task<List<Models.Tareas>>> getAllTasks = async () => await _context.Task.ToListAsync();
+            var tasks = await getAllTasks();
             return Ok(tasks);
         }
         #endregion
@@ -37,7 +42,8 @@ namespace GestionApi.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> Get(int id)
         {
-            var task = await _context.Task.FindAsync(id);
+            Func<int, Task<Models.Tareas?>> findTaskById = async (taskId) => await _context.Task.FindAsync(taskId);
+            var task = await findTaskById(id);
             if (task == null)
             {
                 return NotFound("No se encontró el registro con el ID especificado");
@@ -56,8 +62,15 @@ namespace GestionApi.Controllers
             {
                 return BadRequest("No puede estar nulo");
             }
-            _context.Task.Add(task);
-            await _context.SaveChangesAsync();
+            Action<Models.Tareas> addTask = t => _context.Task.Add(t);
+            Func<Task> saveChanges = async () => await _context.SaveChangesAsync();
+
+            addTask(task);
+            await saveChanges();
+            if (_hub != null)
+            {
+                await _hub.Clients.All.SendAsync("taskCreated", task);
+            }
             return CreatedAtAction(nameof(Get), new { id = task.Id }, task);
         }
         #endregion
@@ -71,10 +84,12 @@ namespace GestionApi.Controllers
             {
                 return BadRequest("El ID no coincide");
             }
-            _context.Entry(task).State = EntityState.Modified;
+            Action setModified = () => _context.Entry(task).State = EntityState.Modified;
+            Func<Task> saveChanges = async () => await _context.SaveChangesAsync();
             try
             {
-                await _context.SaveChangesAsync();
+                setModified();
+                await saveChanges();
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -87,6 +102,10 @@ namespace GestionApi.Controllers
                     throw;
                 }
             }
+            if (_hub != null)
+            {
+                await _hub.Clients.All.SendAsync("taskUpdated", task);
+            }
             return NoContent();
         }
         #endregion
@@ -96,13 +115,21 @@ namespace GestionApi.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var task = await _context.Task.FindAsync(id);
+            Func<int, Task<Models.Tareas?>> findTaskById = async (taskId) => await _context.Task.FindAsync(taskId);
+            var task = await findTaskById(id);
             if (task == null)
             {
                 return NotFound("No se encontró la tarea con el ID especificado");
             }
-            _context.Task.Remove(task);
-            await _context.SaveChangesAsync();
+            Action<Models.Tareas> removeTask = t => _context.Task.Remove(t);
+            Func<Task> saveChanges = async () => await _context.SaveChangesAsync();
+
+            removeTask(task);
+            await saveChanges();
+            if (_hub != null)
+            {
+                await _hub.Clients.All.SendAsync("taskDeleted", id);
+            }
             return NoContent();
         }
 

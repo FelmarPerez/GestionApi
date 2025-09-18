@@ -26,28 +26,40 @@ namespace GestionApi.Controllers
         {
             try
             {
+                // Delegados / funciones anónimas
+                Func<Task<bool>> userExists = async () =>
+                    await _context.Usuario.AnyAsync(u => u.NombreUsuario == request.NombreUsuario || u.Email == request.Email);
+
+                Func<string, string> hashPassword = pwd => _passwordService.HashPassword(pwd);
+                Func<Usuario> buildUser = () => new Usuario
+                {
+                    NombreUsuario = request.NombreUsuario,
+                    Email = request.Email,
+                    Password = hashPassword(request.Password),
+                    FechaCreacion = DateTime.Now,
+                    Activo = true
+                };
+
+                Action<Usuario> addUser = u => _context.Usuario.Add(u);
+                Func<Task> saveChanges = async () => await _context.SaveChangesAsync();
+                Func<Usuario, string> genToken = u => _jwtService.GenerateToken(u);
+                Func<string> genRefresh = () => _jwtService.GenerateRefreshToken();
+
                 // Verificar si el usuario ya existe
-                if (await _context.Usuario.AnyAsync(u => u.NombreUsuario == request.NombreUsuario || u.Email == request.Email))
+                if (await userExists())
                 {
                     return BadRequest(new { message = "El usuario o email ya existe" });
                 }
 
                 // Crear nuevo usuario
-                var usuario = new Usuario
-                {
-                    NombreUsuario = request.NombreUsuario,
-                    Email = request.Email,
-                    Password = _passwordService.HashPassword(request.Password),
-                    FechaCreacion = DateTime.Now,
-                    Activo = true
-                };
+                var usuario = buildUser();
 
-                _context.Usuario.Add(usuario);
-                await _context.SaveChangesAsync();
+                addUser(usuario);
+                await saveChanges();
 
                 // Generar token
-                var token = _jwtService.GenerateToken(usuario);
-                var refreshToken = _jwtService.GenerateRefreshToken();
+                var token = genToken(usuario);
+                var refreshToken = genRefresh();
 
                 var response = new AuthResponse
                 {
@@ -77,18 +89,24 @@ namespace GestionApi.Controllers
         {
             try
             {
-                // Buscar usuario
-                var usuario = await _context.Usuario
-                    .FirstOrDefaultAsync(u => u.NombreUsuario == request.NombreUsuario && u.Activo);
+                // Delegados / funciones anónimas
+                Func<Task<Usuario?>> findActiveByUsername = async () =>
+                    await _context.Usuario.FirstOrDefaultAsync(u => u.NombreUsuario == request.NombreUsuario && u.Activo);
+                Func<string, string, bool> verifyPassword = (plain, hash) => _passwordService.VerifyPassword(plain, hash);
+                Func<Usuario, string> genToken = u => _jwtService.GenerateToken(u);
+                Func<string> genRefresh = () => _jwtService.GenerateRefreshToken();
 
-                if (usuario == null || !_passwordService.VerifyPassword(request.Password, usuario.Password))
+                // Buscar usuario
+                var usuario = await findActiveByUsername();
+
+                if (usuario == null || !verifyPassword(request.Password, usuario.Password))
                 {
                     return Unauthorized(new { message = "Credenciales inválidas" });
                 }
 
                 // Generar token
-                var token = _jwtService.GenerateToken(usuario);
-                var refreshToken = _jwtService.GenerateRefreshToken();
+                var token = genToken(usuario);
+                var refreshToken = genRefresh();
 
                 var response = new AuthResponse
                 {
