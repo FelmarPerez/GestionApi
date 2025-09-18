@@ -20,4 +20,8 @@
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.7" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="Migrations\20250125000000_AgregarUsuarios.Designer.cs" />
+  </ItemGroup>
+
 </Project>
