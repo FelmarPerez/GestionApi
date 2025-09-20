@@ -9,7 +9,7 @@ namespace GestionApi.Controllers
 {
     [ApiController] //Decirle a Swagger que esto es un controlador de API
     [Route("api/[controller]")]
-    [Authorize] // Requerir autenticación JWT para todos los endpoints
+    //[Authorize] // Requerir autenticación JWT para todos los endpoints
     public class TaskController : Controller
     {
         #region CONTEXTO
